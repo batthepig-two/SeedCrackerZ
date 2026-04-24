@@ -33,13 +33,17 @@ Built by **Batthepig**.
 
 ## Prerequisites
 
-| Requirement | Ubuntu / Debian | macOS | a-Shell (iPhone) |
-|---|---|---|---|
-| C compiler | `sudo apt install clang make` | `xcode-select --install` | built-in |
-| cubiomes downloader | `sudo apt install git` (or curl works too) | git built-in | `pkg install git` |
+You need a C compiler and `curl`. Nothing else — `make` handles the rest.
 
-Windows: install [WSL](https://learn.microsoft.com/en-us/windows/wsl/),
-then follow the Ubuntu steps.
+| Platform | One-time setup |
+|---|---|
+| Ubuntu / Debian | `sudo apt install clang make curl` |
+| macOS | `xcode-select --install` |
+| a-Shell (iPhone / iPad) | nothing — `clang`, `make`, and `curl` are built in |
+| Windows | install [WSL](https://learn.microsoft.com/en-us/windows/wsl/), then follow the Ubuntu line |
+
+`git` is **not** required. The Makefile downloads cubiomes (and its data
+tables) over plain HTTPS using `curl`.
 
 ---
 
@@ -51,8 +55,9 @@ curl -O https://raw.githubusercontent.com/batthepig-two/SeedCrackerZ/main/Makefi
 make
 ```
 
-`make` clones the cubiomes library (using git or curl) and then compiles
-everything in one step. There is nothing else to install.
+`make` downloads cubiomes and compiles everything in one step. Re-running
+`make` is a no-op once the binary exists. Use `make clean` to wipe just the
+binary, or `make distclean` to also remove the downloaded cubiomes folder.
 
 ---
 
@@ -62,8 +67,8 @@ everything in one step. There is nothing else to install.
 ./seedcrackerz
 ```
 
-The program is fully interactive. It asks for your Minecraft version, then lets
-you add as many evidence items as you have before running the search.
+The program is fully interactive. It asks for your Minecraft version, then
+lets you add as many evidence items as you have before running the search.
 
 ---
 
@@ -212,26 +217,47 @@ Verify with `/seed` in-game (requires cheats or operator permission).
 - Add more slime-chunk results (each one cuts ~90%).
 - Add a second structure of a different type.
 
+**Build errors:**
+
+| Error | Fix |
+|---|---|
+| `cc: command not found` | Use `make CC=clang` (or install `cc`). |
+| `pthread.h: file not found` | Already handled — the build ships a fallback in `compat/`. If you still see this, make sure you pulled the latest `Makefile`. |
+| `tables/btreeXX.h: file not found` | Run `make distclean && make` to redownload cubiomes cleanly. |
+| `Graph cycles through cubiomes/...` | Old Makefile. Re-download the current `Makefile` from this repo. |
+| `curl: (6) Could not resolve host` | No internet. The first `make` needs to download cubiomes. |
+
 ---
 
 ## Platform Notes
 
 ### a-Shell (iPhone / iPad)
 
+a-Shell ships everything you need — `clang`, `make`, and `curl`. There is
+no separate setup step.
+
 ```sh
-pkg install git
+cd ~/Documents
+mkdir seedcrackerz && cd seedcrackerz
 curl -O https://raw.githubusercontent.com/batthepig-two/SeedCrackerZ/main/seedcrackerz.c
 curl -O https://raw.githubusercontent.com/batthepig-two/SeedCrackerZ/main/Makefile
 make
 ./seedcrackerz
 ```
 
+If `make` complains that `cc` isn't found, run it as `make CC=clang`
+instead. The build automatically uses a bundled `pthread.h` shim, so the
+parallel quad-feature search compiles and runs single-threaded on iOS.
+
+a-Shell is sandboxed to `~/Documents`, so keep the project there.
+
 ### macOS
 
-`xcode-select --install` provides both clang and git.
+`xcode-select --install` provides clang. `make` and `curl` are already
+included.
 
 ### Windows (WSL)
 
 1. Open PowerShell as Administrator: `wsl --install`, then restart.
-2. Open the Ubuntu app: `sudo apt install clang make git`.
+2. Open the Ubuntu app: `sudo apt install clang make curl`.
 3. Follow the Build steps above.

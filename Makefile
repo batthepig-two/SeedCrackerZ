@@ -1,5 +1,20 @@
-CC      = cc
-CFLAGS  = -O3 -std=c11 -Icubiomes -Wall -Wno-unused-function
+# SeedCrackerZ build
+#
+# `make` downloads the cubiomes library (no git required), then compiles
+# seedcrackerz into a single binary. Re-running `make` is a no-op once
+# everything is in place.
+#
+#   make            build
+#   make clean      remove the binary
+#   make distclean  remove the binary and the downloaded cubiomes folder
+
+# Prefer `cc`; fall back to `clang` (e.g. iOS a-Shell, where `cc` is missing).
+CC      ?= $(shell command -v cc 2>/dev/null || command -v clang 2>/dev/null || echo cc)
+
+# `-idirafter compat` puts the local pthread shim *after* the system search
+# path, so a real <pthread.h> is always preferred when one exists.
+CFLAGS  = -O3 -std=c11 -Icubiomes -idirafter compat \
+          -Wall -Wno-unused-function -Wno-macro-redefined
 LDFLAGS = -lm
 
 CUBIOMES_SRC = cubiomes/generator.c cubiomes/finders.c cubiomes/biomes.c \
@@ -8,30 +23,38 @@ CUBIOMES_SRC = cubiomes/generator.c cubiomes/finders.c cubiomes/biomes.c \
 
 SRCS = seedcrackerz.c $(CUBIOMES_SRC)
 
+CUBIOMES_FILES  = generator.c generator.h finders.c finders.h biomes.c biomes.h \
+                  noise.c noise.h util.c util.h layers.c layers.h rng.h         \
+                  biomenoise.c biomenoise.h quadbase.c quadbase.h
+CUBIOMES_TABLES = btree18.h btree19.h btree192.h btree20.h btree21wd.h
+CUBIOMES_BASE   = https://raw.githubusercontent.com/cubitect/cubiomes/master
+
 all: seedcrackerz
 
-seedcrackerz: $(SRCS)
+seedcrackerz: cubiomes-stamp seedcrackerz.c
 	$(CC) $(CFLAGS) -o $@ $(SRCS) $(LDFLAGS)
 
-cubiomes/generator.c:
+# Marker file: present iff every cubiomes source we need is on disk.
+cubiomes-stamp:
 	@echo "Fetching cubiomes library..."
-	@if command -v git >/dev/null 2>&1; then \
-		git clone --depth=1 https://github.com/cubitect/cubiomes.git cubiomes; \
-	else \
-		mkdir -p cubiomes && \
-		for f in generator.c generator.h finders.c finders.h biomes.c biomes.h \
-		         noise.c noise.h util.c util.h layers.c layers.h rng.h         \
-		         biomenoise.c biomenoise.h quadbase.c quadbase.h; do            \
-		    curl -s -o cubiomes/$$f                                             \
-		      "https://raw.githubusercontent.com/cubitect/cubiomes/master/$$f"; \
-		done; \
-	fi
+	@mkdir -p cubiomes/tables
+	@for f in $(CUBIOMES_FILES); do \
+	    if [ ! -s cubiomes/$$f ]; then \
+	        echo "  cubiomes/$$f"; \
+	        curl -fsSL -o cubiomes/$$f "$(CUBIOMES_BASE)/$$f" || exit 1; \
+	    fi; \
+	done
+	@for f in $(CUBIOMES_TABLES); do \
+	    if [ ! -s cubiomes/tables/$$f ]; then \
+	        echo "  cubiomes/tables/$$f"; \
+	        curl -fsSL -o cubiomes/tables/$$f "$(CUBIOMES_BASE)/tables/$$f" || exit 1; \
+	    fi; \
+	done
 	@echo "cubiomes ready."
-
-$(SRCS): cubiomes/generator.c
+	@touch cubiomes-stamp
 
 clean:
-	rm -f seedcrackerz
+	rm -f seedcrackerz cubiomes-stamp
 
 distclean: clean
 	rm -rf cubiomes

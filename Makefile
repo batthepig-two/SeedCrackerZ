@@ -1,12 +1,12 @@
 # SeedCrackerZ build
 #
-# `make` downloads the cubiomes library (no git required), then compiles
-# seedcrackerz into a single binary. Re-running `make` is a no-op once
-# everything is in place.
+# `make` downloads the cubiomes library and the bundled pthread fallback
+# (no git required), then compiles seedcrackerz into a single binary.
+# Re-running `make` is a no-op once everything is in place.
 #
 #   make            build
 #   make clean      remove the binary
-#   make distclean  remove the binary and the downloaded cubiomes folder
+#   make distclean  remove the binary, cubiomes/, and compat/
 
 # Prefer `cc`; fall back to `clang` (e.g. iOS a-Shell, where `cc` is missing).
 CC      ?= $(shell command -v cc 2>/dev/null || command -v clang 2>/dev/null || echo cc)
@@ -29,15 +29,19 @@ CUBIOMES_FILES  = generator.c generator.h finders.c finders.h biomes.c biomes.h 
 CUBIOMES_TABLES = btree18.h btree19.h btree192.h btree20.h btree21wd.h
 CUBIOMES_BASE   = https://raw.githubusercontent.com/cubitect/cubiomes/master
 
+# Where to fetch the pthread fallback shim from when it isn't already present
+# (e.g. when the user only ran `curl -O` for seedcrackerz.c and the Makefile).
+SEEDCRACKERZ_BASE = https://raw.githubusercontent.com/batthepig-two/SeedCrackerZ/main
+
 all: seedcrackerz
 
-seedcrackerz: cubiomes-stamp seedcrackerz.c
+seedcrackerz: deps-stamp seedcrackerz.c
 	$(CC) $(CFLAGS) -o $@ $(SRCS) $(LDFLAGS)
 
-# Marker file: present iff every cubiomes source we need is on disk.
-cubiomes-stamp:
+# Marker file: present iff every cubiomes source AND compat/pthread.h is on disk.
+deps-stamp:
 	@echo "Fetching cubiomes library..."
-	@mkdir -p cubiomes/tables
+	@mkdir -p cubiomes/tables compat
 	@for f in $(CUBIOMES_FILES); do \
 	    if [ ! -s cubiomes/$$f ]; then \
 	        echo "  cubiomes/$$f"; \
@@ -50,13 +54,17 @@ cubiomes-stamp:
 	        curl -fsSL -o cubiomes/tables/$$f "$(CUBIOMES_BASE)/tables/$$f" || exit 1; \
 	    fi; \
 	done
-	@echo "cubiomes ready."
-	@touch cubiomes-stamp
+	@if [ ! -s compat/pthread.h ]; then \
+	    echo "  compat/pthread.h"; \
+	    curl -fsSL -o compat/pthread.h "$(SEEDCRACKERZ_BASE)/compat/pthread.h" || exit 1; \
+	fi
+	@echo "dependencies ready."
+	@touch deps-stamp
 
 clean:
-	rm -f seedcrackerz cubiomes-stamp
+	rm -f seedcrackerz deps-stamp
 
 distclean: clean
-	rm -rf cubiomes
+	rm -rf cubiomes compat
 
 .PHONY: all clean distclean

@@ -223,7 +223,7 @@ Verify with `/seed` in-game (requires cheats or operator permission).
 |---|---|
 | `cc: command not found` | Use `make CC=clang` (or install `cc`). |
 | `pthread.h: file not found` | Already handled — the build ships a fallback in `compat/`. If you still see this, make sure you pulled the latest `Makefile`. |
-| `tables/btreeXX.h: file not found` | Run `make distclean && make` to redownload cubiomes cleanly. |
+| `tables/btreeXX.h: file not found` | Run `make distclean`, then `make`, to redownload cubiomes cleanly. |
 | `Graph cycles through cubiomes/...` | Old Makefile. Re-download the current `Makefile` from this repo. |
 | `curl: (6) Could not resolve host` | No internet. The first `make` needs to download cubiomes. |
 
@@ -236,12 +236,36 @@ Verify with `/seed` in-game (requires cheats or operator permission).
 a-Shell ships everything you need — `clang`, `make`, and `curl`. There is
 no separate setup step.
 
+> **a-Shell does not understand `&&`** — if you type
+> `mkdir foo && cd foo`, it will create literal folders called `foo`,
+> `&&`, and `cd`, then complain. Run each command on its own line, exactly
+> as written below.
+
 ```sh
 cd ~/Documents
-mkdir seedcrackerz && cd seedcrackerz
+```
+
+```sh
+mkdir seedcrackerz
+```
+
+```sh
+cd seedcrackerz
+```
+
+```sh
 curl -O https://raw.githubusercontent.com/batthepig-two/SeedCrackerZ/main/seedcrackerz.c
+```
+
+```sh
 curl -O https://raw.githubusercontent.com/batthepig-two/SeedCrackerZ/main/Makefile
+```
+
+```sh
 make
+```
+
+```sh
 ./seedcrackerz
 ```
 

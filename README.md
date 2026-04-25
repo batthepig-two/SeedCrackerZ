@@ -24,10 +24,11 @@ Built by **Batthepig**.
    - [Slime Chunk](#slime-chunk)
    - [Biome Sample](#biome-sample)
 5. [Step-by-Step Usage](#step-by-step-usage)
-6. [Evidence Quality Guide](#evidence-quality-guide)
-7. [Understanding Results](#understanding-results)
-8. [Troubleshooting](#troubleshooting)
-9. [Platform Notes](#platform-notes)
+6. [Common-Seed vs Random-Seed Mode](#common-seed-vs-random-seed-mode)
+7. [Evidence Quality Guide](#evidence-quality-guide)
+8. [Understanding Results](#understanding-results)
+9. [Troubleshooting](#troubleshooting)
+10. [Platform Notes](#platform-notes)
 
 ---
 
@@ -154,31 +155,76 @@ Add evidence:  s=structure  c=slime chunk  b=biome  p=print list  d=done
 Add items one at a time. Use `p` to review your list. Type `d` when done.
 
 ```
-Seed range start [-2147483648]:
-Seed range end   [2147483647]:
+-- Search Mode --
+  1) Common-seed mode  (signed 32-bit, fast)
+  2) Random-seed mode  (unsigned 48-bit, slow)
+Choice [1]:
 ```
 
-The default (full 32-bit signed integer range) takes 15–30 seconds at
-100–300 million seeds/second. See the quality guide for wider ranges.
+See [Common-Seed vs Random-Seed Mode](#common-seed-vs-random-seed-mode) for
+which to pick.
+
+```
+Range start [-2147483648]:
+Range end   [2147483647]:
+Threads (1 = single-threaded) [8]:
+```
+
+The thread count defaults to the number of CPU cores detected (capped at 16).
+Set it to 1 if you want a single worker, or higher for more parallelism.
+
+---
+
+## Common-Seed vs Random-Seed Mode
+
+Java's RNG is internally 48-bit, so structure placement and slime chunks
+depend only on the **lower 48 bits** of the world seed. Biome generation
+uses the **full 64 bits**. SeedCrackerZ exploits this with a two-phase
+search:
+
+- **Phase A (lower 48):** structure + slime checks — these run on every
+  candidate.
+- **Phase B (upper 16):** biome checks — these only run on candidates that
+  already passed Phase A. When biome evidence is present, Phase B *lifts*
+  each Phase-A survivor to a 64-bit seed by trying every value of the
+  upper 16 bits (65 536 lifts per candidate).
+
+You pick which slice of the seed space to scan:
+
+| Mode | Range scanned | Best for |
+|---|---|---|
+| **Common-seed** (option 1) | signed 32-bit `[-2³¹, 2³¹-1]` | Numeric or string seeds typed by hand. Hashed strings and numeric seeds both fit in a signed int and get sign-extended to 64 bits, so a 32-bit scan with no lifting reaches them all. |
+| **Random-seed** (option 2) | unsigned 48-bit `[0, 2⁴⁸-1]` | Seeds Minecraft picked itself with `new Random().nextLong()` — these have random upper-16 bits and live anywhere in the 64-bit space. Phase B lifts each Phase-A match to recover the upper 16. |
+
+**If you used random-seed mode without any biome evidence**, the cracker
+will report the *lower-48 candidate values* it found. Each one represents
+65 536 possible 64-bit world seeds; you need at least one biome sample to
+narrow it down to a single seed.
 
 ---
 
 ## Evidence Quality Guide
 
-| Evidence combination | Effective range | Typical time |
+| Evidence combination | Mode | Typical time |
 |---|---|---|
-| 2+ different structure types | 32-bit default | ~15 seconds |
-| 1 structure + 1 biome | 32-bit default | ~30 seconds |
-| 3+ slime chunks | 32-bit default | ~5 seconds |
-| 3+ slime chunks + 1 structure | 48-bit range | 30–90 minutes |
-| Biome observations only | 32-bit default | Minutes, many false positives |
+| 2+ different structure types | Common-seed (32-bit) | ~15 seconds |
+| 1 structure + 1 biome | Common-seed (32-bit) | ~30 seconds |
+| 3+ slime chunks | Common-seed (32-bit) | ~5 seconds |
+| 2+ structures + 1 biome | Random-seed (48-bit) | hours on multi-core |
+| 3+ slime chunks + 1 structure + 1 biome | Random-seed (48-bit) | hours on multi-core |
+| 1 structure only | Random-seed (48-bit) | days — add more evidence first |
+| Biome observations only | either mode | many false positives |
 
 **Tips:**
 - Two different structure types from different areas of your world is the
   single best starting combination.
 - Each slime chunk eliminates ~90% of remaining candidates — three is usually
   enough to wipe out all false positives.
-- Add a biome sample last to eliminate any remaining ambiguity.
+- Add a biome sample last to eliminate any remaining ambiguity. Biome
+  evidence is also what allows random-seed mode to recover the upper 16
+  bits of a 64-bit world seed.
+- Random-seed mode without 2+ Phase-A constraints (structures/slime) is
+  impractical — the inner loop has to scan 2⁴⁸ ≈ 281 trillion values.
 
 ---
 
@@ -209,7 +255,8 @@ Verify with `/seed` in-game (requires cheats or operator permission).
 2. Confirm the Minecraft version matches when the world was created.
 3. For structures: try ±16 blocks (one chunk) in each direction.
 4. For slime chunks: was your test below Y=40 in a **cave**, not swamp ground?
-5. Widen the search range — your seed may be outside the 32-bit default.
+5. If you used common-seed mode (option 1) and your world was created
+   without a typed seed, switch to random-seed mode (option 2).
 
 **Too many results:**
 
@@ -270,8 +317,11 @@ make
 ```
 
 If `make` complains that `cc` isn't found, run it as `make CC=clang`
-instead. The build automatically uses a bundled `pthread.h` shim, so the
-parallel quad-feature search compiles and runs single-threaded on iOS.
+instead. The build automatically uses a bundled `pthread.h` shim that
+runs worker threads inline, so SeedCrackerZ compiles and runs correctly
+on iOS even though a-Shell ships no pthread header. The search runs on
+a single core there; results are identical to a multi-core run, just
+slower.
 
 a-Shell is sandboxed to `~/Documents`, so keep the project there.
 

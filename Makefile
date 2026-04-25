@@ -2,7 +2,8 @@
 #
 # `make` downloads the cubiomes library and the bundled pthread fallback
 # (no git required), then compiles seedcrackerz into a single binary.
-# Re-running `make` is a no-op once everything is in place.
+# The download step is idempotent: missing files are re-fetched on every
+# run, so a partial or stale checkout self-heals.
 #
 #   make            build
 #   make clean      remove the binary
@@ -35,36 +36,41 @@ SEEDCRACKERZ_BASE = https://raw.githubusercontent.com/batthepig-two/SeedCrackerZ
 
 all: seedcrackerz
 
-seedcrackerz: deps-stamp seedcrackerz.c
+# `| deps` is an order-only prerequisite: it guarantees deps runs first,
+# but doesn't trigger a rebuild of seedcrackerz on every make invocation.
+seedcrackerz: seedcrackerz.c | deps
 	$(CC) $(CFLAGS) -o $@ $(SRCS) $(LDFLAGS)
 
-# Marker file: present iff every cubiomes source AND compat/pthread.h is on disk.
-deps-stamp:
-	@echo "Fetching cubiomes library..."
+# Always-run dependency check. Each download is gated on `if [ ! -s file ]`,
+# so re-runs are essentially free when nothing is missing.
+deps:
 	@mkdir -p cubiomes/tables compat
-	@for f in $(CUBIOMES_FILES); do \
+	@announced=0; \
+	for f in $(CUBIOMES_FILES); do \
 	    if [ ! -s cubiomes/$$f ]; then \
+	        if [ $$announced -eq 0 ]; then echo "Fetching dependencies..."; announced=1; fi; \
 	        echo "  cubiomes/$$f"; \
 	        curl -fsSL -o cubiomes/$$f "$(CUBIOMES_BASE)/$$f" || exit 1; \
 	    fi; \
-	done
-	@for f in $(CUBIOMES_TABLES); do \
+	done; \
+	for f in $(CUBIOMES_TABLES); do \
 	    if [ ! -s cubiomes/tables/$$f ]; then \
+	        if [ $$announced -eq 0 ]; then echo "Fetching dependencies..."; announced=1; fi; \
 	        echo "  cubiomes/tables/$$f"; \
 	        curl -fsSL -o cubiomes/tables/$$f "$(CUBIOMES_BASE)/tables/$$f" || exit 1; \
 	    fi; \
-	done
-	@if [ ! -s compat/pthread.h ]; then \
+	done; \
+	if [ ! -s compat/pthread.h ]; then \
+	    if [ $$announced -eq 0 ]; then echo "Fetching dependencies..."; announced=1; fi; \
 	    echo "  compat/pthread.h"; \
 	    curl -fsSL -o compat/pthread.h "$(SEEDCRACKERZ_BASE)/compat/pthread.h" || exit 1; \
-	fi
-	@echo "dependencies ready."
-	@touch deps-stamp
+	fi; \
+	if [ $$announced -eq 1 ]; then echo "dependencies ready."; fi
 
 clean:
-	rm -f seedcrackerz deps-stamp
+	rm -f seedcrackerz cubiomes-stamp deps-stamp
 
 distclean: clean
 	rm -rf cubiomes compat
 
-.PHONY: all clean distclean
+.PHONY: all clean distclean deps

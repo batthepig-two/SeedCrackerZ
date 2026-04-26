@@ -377,7 +377,8 @@ rm seedcrackerz.checkpoint
 
 | Error | Fix |
 |---|---|
-| `cc: command not found` | Use `make CC=clang` (or install `cc`). |
+| `cc: command not found` | The current `Makefile` auto-detects `clang` when `cc` is missing; if you still see this you have an old `Makefile` — re-`curl` it. |
+| `make: don't know how to make \|. Stop` | Old `Makefile` parsed by BSD make (a-Shell, FreeBSD). Re-`curl` the current `Makefile` from this repo — it's now bmake-compatible. |
 | `pthread.h: file not found` | Already handled — the build ships a fallback in `compat/`. If you still see this, make sure you pulled the latest `Makefile`. |
 | `tables/btreeXX.h: file not found` | Run `make distclean`, then `make`, to redownload cubiomes cleanly. |
 | `Graph cycles through cubiomes/...` | Old Makefile. Re-download the current `Makefile` from this repo. |

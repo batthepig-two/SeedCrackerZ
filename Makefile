@@ -8,9 +8,12 @@
 #   make            build
 #   make clean      remove the binary
 #   make distclean  remove the binary, cubiomes/, and compat/
-
-# Prefer `cc`; fall back to `clang` (e.g. iOS a-Shell, where `cc` is missing).
-CC      ?= $(shell command -v cc 2>/dev/null || command -v clang 2>/dev/null || echo cc)
+#
+# This Makefile is written to be portable across GNU make (Linux, macOS
+# with Homebrew, WSL, Termux) and BSD make (default `make` on iOS
+# a-Shell, FreeBSD, NetBSD). It avoids GNU-only constructs:
+#   * No `target: deps | order-only` syntax  -- bmake reads `|` as a target.
+#   * No `$(shell ...)` for compiler detection -- handled in the recipe.
 
 # `-idirafter compat` puts the local pthread shim *after* the system search
 # path, so a real <pthread.h> is always preferred when one exists.
@@ -36,10 +39,28 @@ SEEDCRACKERZ_BASE = https://raw.githubusercontent.com/batthepig-two/SeedCrackerZ
 
 all: seedcrackerz
 
-# `| deps` is an order-only prerequisite: it guarantees deps runs first,
-# but doesn't trigger a rebuild of seedcrackerz on every make invocation.
-seedcrackerz: seedcrackerz.c | deps
-	$(CC) $(CFLAGS) -o $@ $(SRCS) $(LDFLAGS)
+# Recursive `$(MAKE) deps` is portable -- works under both GNU make and
+# bmake -- and avoids the order-only-prerequisite syntax that bmake doesn't
+# understand. `deps` is .PHONY so it always runs (cheap when nothing is
+# missing), and seedcrackerz only relinks when seedcrackerz.c actually
+# changes.
+#
+# Compiler detection is done at recipe time, not at parse time, so it works
+# on bmake (which has no `$(shell ...)` function) as well as GNU make.
+# Order of preference: $$CC from environment, then $(CC) macro, then `cc`,
+# then `clang` (covers iOS a-Shell, which only ships clang).
+seedcrackerz: seedcrackerz.c
+	@$(MAKE) deps
+	@CCBIN="$${CC:-}"; \
+	if [ -z "$$CCBIN" ] || ! command -v "$$CCBIN" >/dev/null 2>&1; then \
+	    CCBIN="$$(command -v $(CC) 2>/dev/null || command -v cc 2>/dev/null || command -v clang 2>/dev/null)"; \
+	fi; \
+	if [ -z "$$CCBIN" ]; then \
+	    echo "error: no C compiler found. Install clang or cc, or set CC=..." >&2; \
+	    exit 1; \
+	fi; \
+	echo "$$CCBIN $(CFLAGS) -o $@ $(SRCS) $(LDFLAGS)"; \
+	$$CCBIN $(CFLAGS) -o $@ $(SRCS) $(LDFLAGS)
 
 # Always-run dependency check. Each download is gated on `if [ ! -s file ]`,
 # so re-runs are essentially free when nothing is missing.

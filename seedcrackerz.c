@@ -252,7 +252,16 @@ static const BiInfo BI[] = {
     {giant_tree_taiga,"giant_tree_taiga"},{wooded_mountains,"wooded_mountains"},
     {nether_wastes,"nether_wastes"},{soul_sand_valley,"soul_sand_valley"},
     {crimson_forest,"crimson_forest"},{warped_forest,"warped_forest"},
-    {basalt_deltas,"basalt_deltas"},{-1,NULL}
+    {basalt_deltas,"basalt_deltas"},
+    /* 1.18+ */
+    {meadow,"meadow"},{grove,"grove"},{snowy_slopes,"snowy_slopes"},
+    {jagged_peaks,"jagged_peaks"},{frozen_peaks,"frozen_peaks"},
+    {stony_peaks,"stony_peaks"},{deep_dark,"deep_dark"},
+    /* 1.19+ */
+    {mangrove_swamp,"mangrove_swamp"},
+    /* 1.20+ */
+    {cherry_grove,"cherry_grove"},
+    {-1,NULL}
 };
 static int biome_id(const char *s) {
     for (int i=0;BI[i].name;i++) if (!strcasecmp(BI[i].name,s)) return BI[i].id;
@@ -750,6 +759,8 @@ int main(void)
                 printf("\nBiomes: plains desert forest taiga jungle swamp ocean savanna\n");
                 printf("        badlands dark_forest snowy_tundra nether_wastes\n");
                 printf("        crimson_forest warped_forest soul_sand_valley basalt_deltas\n");
+                printf("        meadow grove snowy_slopes jagged_peaks frozen_peaks\n");
+                printf("        stony_peaks deep_dark mangrove_swamp cherry_grove\n");
                 char bname[64];
                 prompt_str("Biome name","plains",bname,sizeof bname);
                 int bid=biome_id(bname);

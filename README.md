@@ -17,41 +17,78 @@ Built by **Batthepig**.
 ## Table of Contents
 
 1. [Prerequisites](#prerequisites)
-2. [Build](#build)
-3. [Run](#run)
-4. [Evidence Types](#evidence-types)
+2. [Install (no git required)](#install-no-git-required)
+3. [Build from source](#build-from-source)
+4. [Run](#run)
+5. [Evidence Types](#evidence-types)
    - [Structure Location](#structure-location)
    - [Buried Treasure](#buried-treasure)
    - [Slime Chunk](#slime-chunk)
    - [Biome Sample](#biome-sample)
    - [World Spawn](#world-spawn)
-5. [Step-by-Step Usage](#step-by-step-usage)
-6. [Common-Seed vs Random-Seed Mode](#common-seed-vs-random-seed-mode)
-7. [Evidence Quality Guide](#evidence-quality-guide)
-8. [Resume After Interruption](#resume-after-interruption)
-9. [Understanding Results](#understanding-results)
-10. [Troubleshooting](#troubleshooting)
-11. [Platform Notes](#platform-notes)
+6. [Step-by-Step Usage](#step-by-step-usage)
+7. [Common-Seed vs Random-Seed Mode](#common-seed-vs-random-seed-mode)
+8. [Evidence Quality Guide](#evidence-quality-guide)
+9. [Resume After Interruption](#resume-after-interruption)
+10. [Understanding Results](#understanding-results)
+11. [Troubleshooting](#troubleshooting)
+12. [Platform Notes](#platform-notes)
 
 ---
 
 ## Prerequisites
 
-You need a C compiler and `curl`. Nothing else — `make` handles the rest.
-
-| Platform | One-time setup |
+| Platform | What you need |
 |---|---|
-| Ubuntu / Debian | `sudo apt install clang make curl` |
-| macOS | `xcode-select --install` |
-| a-Shell (iPhone / iPad) | nothing — `clang`, `make`, and `curl` are built in |
+| Ubuntu / Debian | `sudo apt install clang curl` |
+| macOS | `xcode-select --install` (curl is already included) |
+| a-Shell (iPhone / iPad) | nothing — `clang` and `curl` are built in |
+| iSH (iPhone / iPad) | installer handles it automatically via `apk` |
+| Termux (Android) | installer handles it automatically via `pkg` |
 | Windows | install [WSL](https://learn.microsoft.com/en-us/windows/wsl/), then follow the Ubuntu line |
 
-`git` is **not** required. The Makefile downloads cubiomes (and its data
-tables) over plain HTTPS using `curl`.
+`git` is **not** required.
 
 ---
 
-## Build
+## Install (no git required)
+
+Works on a-Shell, iSH, Termux, macOS, and Linux.
+The installer downloads all source files and cubiomes, then compiles with `clang`.
+
+**Step 1:** Download the installer
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/batthepig-two/SeedCrackerZ/main/install.sh -o install.sh
+```
+
+**Step 2:** Run it
+
+```sh
+sh install.sh
+```
+
+The binary lands at `SeedCrackerZ/seedcrackerz`. To run it:
+
+```sh
+cd SeedCrackerZ
+./seedcrackerz
+```
+
+> **a-Shell note:** a-Shell does not understand `&&` — run each command on its
+> own line exactly as written above.
+
+> **iSH note:** iSH is Alpine Linux. The installer runs `apk add clang curl`
+> automatically if those tools are missing.
+
+> **Termux note:** The installer runs `pkg install clang curl` automatically
+> if those tools are missing.
+
+---
+
+## Build from source
+
+If you prefer `make` (or already have `git`):
 
 ```sh
 curl -O https://raw.githubusercontent.com/batthepig-two/SeedCrackerZ/main/seedcrackerz.c

@@ -34,12 +34,12 @@ fi
 echo "Detected platform: $PLATFORM"
 echo ""
 
-# Install missing build tools where we can do it automatically
+# Install / ensure build tools
+# iSH: always run apk — it is idempotent and libc-dev (provides pthread.h
+#       and other system headers) is NOT pulled in by clang alone on Alpine.
 if [ "$PLATFORM" = "ish" ]; then
-    if ! command -v clang >/dev/null 2>&1 && ! command -v cc >/dev/null 2>&1; then
-        echo "Installing build tools via apk..."
-        apk add --no-cache clang curl
-    fi
+    echo "iSH detected — ensuring build dependencies (clang, curl, libc-dev)..."
+    apk add --no-cache clang curl libc-dev
 elif [ "$PLATFORM" = "termux" ]; then
     if ! command -v clang >/dev/null 2>&1 && ! command -v cc >/dev/null 2>&1; then
         echo "Installing build tools via pkg..."
@@ -96,10 +96,15 @@ echo "[3/3] Compiling..."
 
 CFLAGS="-O3 -std=c11 -Icubiomes -idirafter compat -Wall -Wno-unused-function -Wno-macro-redefined"
 
-# a-Shell (wasm32-wasi) needs an explicit stack size; harmless on other targets
+# Extra linker/compiler flags per platform:
+#   a-Shell  — explicit stack size (wasm32-wasi requirement)
+#   iSH / Termux / Linux — link real pthreads (musl/glibc keep them in libc
+#              but -lpthread is still required for the mutex symbols on Alpine)
 EXTRA=""
 if [ "$PLATFORM" = "ashell" ]; then
     EXTRA="-Wl,-z,stack-size=8388608"
+elif [ "$PLATFORM" = "ish" ] || [ "$PLATFORM" = "termux" ] || [ "$PLATFORM" = "linux" ]; then
+    EXTRA="-lpthread"
 fi
 
 $CCBIN $CFLAGS $EXTRA \

@@ -96,13 +96,17 @@ echo "[3/3] Compiling..."
 
 CFLAGS="-O3 -std=c11 -Icubiomes -idirafter compat -Wall -Wno-unused-function -Wno-macro-redefined"
 
-# Extra linker/compiler flags per platform:
-#   a-Shell  — explicit stack size (wasm32-wasi requirement)
-#   iSH / Termux / Linux — link real pthreads (musl/glibc keep them in libc
-#              but -lpthread is still required for the mutex symbols on Alpine)
+# Extra flags per platform:
+#   a-Shell (wasm32-wasi):
+#     -D_WASI_EMULATED_SIGNAL + -lwasi-emulated-signal  — wasm has no native
+#       signals; this enables the WASI emulation layer so <signal.h>,
+#       sig_atomic_t, and sigaction() compile and link correctly.
+#     -Wl,-z,stack-size=8388608  — wasm32 default stack is tiny; bump it.
+#   iSH / Termux / Linux:
+#     -lpthread — required to resolve pthread_mutex_* symbols on musl/glibc.
 EXTRA=""
 if [ "$PLATFORM" = "ashell" ]; then
-    EXTRA="-Wl,-z,stack-size=8388608"
+    EXTRA="-D_WASI_EMULATED_SIGNAL -lwasi-emulated-signal -Wl,-z,stack-size=8388608"
 elif [ "$PLATFORM" = "ish" ] || [ "$PLATFORM" = "termux" ] || [ "$PLATFORM" = "linux" ]; then
     EXTRA="-lpthread"
 fi

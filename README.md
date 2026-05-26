@@ -43,7 +43,7 @@ Built by **Batthepig**.
 | Ubuntu / Debian | `sudo apt install clang curl` |
 | macOS | `xcode-select --install` (curl is already included) |
 | a-Shell (iPhone / iPad) | nothing — `clang` and `curl` are built in |
-| iSH (iPhone / iPad) | installer handles it automatically via `apk` |
+| iSH (iPhone / iPad) | `apk add curl clang` first, then run the installer |
 | Termux (Android) | installer handles it automatically via `pkg` |
 | Windows | install [WSL](https://learn.microsoft.com/en-us/windows/wsl/), then follow the Ubuntu line |
 
@@ -78,8 +78,11 @@ cd SeedCrackerZ
 > **a-Shell note:** a-Shell does not understand `&&` — run each command on its
 > own line exactly as written above.
 
-> **iSH note:** iSH is Alpine Linux. The installer runs `apk add clang curl`
-> automatically if those tools are missing.
+> **iSH note:** iSH (Alpine Linux) does not ship `curl` by default.
+> Run this first, then proceed with Step 1:
+> ```sh
+> apk add curl clang
+> ```
 
 > **Termux note:** The installer runs `pkg install clang curl` automatically
 > if those tools are missing.
@@ -471,6 +474,17 @@ a single core there; results are identical to a multi-core run, just
 slower.
 
 a-Shell is sandboxed to `~/Documents`, so keep the project there.
+
+### iSH (iPhone / iPad)
+
+iSH is a Linux environment running Alpine Linux. It does **not** ship `curl`
+by default, so you must install it before the installer can run.
+
+```sh
+apk add curl clang
+```
+
+Then follow the normal [Install](#install-no-git-required) steps.
 
 ### macOS
 
